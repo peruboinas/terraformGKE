@@ -1,6 +1,5 @@
 provider "google" {
-  credentials = file("./.json")
-  project     = ""
-  region      = "us-central1"
-  version     = "~> 2.5.0"
+credentials = "${file("data-fabric-274409-35f7b1f74678.json")}"
+project = "data-fabric-274409"
+region = "us-central1"
 }
