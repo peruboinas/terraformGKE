@@ -1,22 +1,46 @@
+# Specify the GCP Provider
+  provider "google-beta" {
+    project = var.project_id
+    region  = var.region
+    version = "~> 3.10"
+    alias   = "gb3"
+  }
 
-module "cluster" {
-  source                           = "git@github.com:FairwindsOps/terraform-gke.git//vpc-native?ref=vpc-native-v1.2.0"
-  region                           = "us-central1"
-  name                             = "gke-example"
-  project                          = "terraform-module-cluster"
-  network_name                     = "kube"
-  nodes_subnetwork_name            = module.network.subnetwork
-  kubernetes_version               = "1.16.10-gke.8"
-  pods_secondary_ip_range_name     = module.network.gke_pods_1
-  services_secondary_ip_range_name = module.network.gke_services_1
-}
-module "node_pool" {
-  source             = "git@github.com:/FairwindsOps/terraform-gke//node_pool?ref=node-pool-v3.0.0"
-  name               = "gke-example-node-pool"
-  region             = module.cluster.region
-  gke_cluster_name   = module.cluster.name
-  machine_type       = "n1-standard-4"
-  min_node_count     = "1"
-  max_node_count     = "2"
-  kubernetes_version = module.cluster.kubernetes_version
-}    
+  # Create a GKE cluster
+  resource "google_container_cluster" "my_k8s_cluster" {
+    provider           = google-beta.gb3
+    name               = "my-k8s-cluster"
+    location           = var.region
+    initial_node_count = 1
+
+    master_auth {
+      username = ""
+      password = ""
+    }
+
+    # Enable Workload Identity
+    workload_identity_config {
+      identity_namespace = "${var.project_id}.svc.id.goog"
+    }
+
+    node_config {
+      machine_type = var.machine_type
+      oauth_scopes = [
+        "https://www.googleapis.com/auth/logging.write",
+        "https://www.googleapis.com/auth/monitoring",
+      ]
+
+      metadata = {
+        "disable-legacy-endpoints" = "true"
+      }
+
+      workload_metadata_config {
+        node_metadata = "GKE_METADATA_SERVER"
+      }
+
+      labels = { # Update: Replace with desired labels
+        "environment" = "test"
+        "team"        = "devops"
+      }
+    }
+  }
